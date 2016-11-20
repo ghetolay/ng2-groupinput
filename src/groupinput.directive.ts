@@ -14,27 +14,39 @@ export class GroupInputDirective {
   @ContentChildren(<any>FULLFILL)
   fullfills: QueryList<Fullfill>;
 
-  private unlisten: Function
+  private unlistens: Function[] = [];
 
   constructor( private renderer: Renderer, private elRef: ElementRef) {
   }
 
   ngAfterViewInit() {
-    this.unlisten = this.renderer.listen(this.elRef.nativeElement, 'keydown', (e: KeyboardEvent) => {
+    this.unlistens = [
+    	this.renderer.listen(this.elRef.nativeElement, 'keydown', (e: KeyboardEvent) => {
 
-      // end
-      if (e.keyCode == 35) {
-        e.preventDefault();
-        //TODO maybe better behavior
-        //like last NON-EMPTY input not just last input
-        focusAtEnd(this.fullfills.last);
-      }
-      // home
-      else if(e.keyCode == 36) {
-        e.preventDefault();
-        focusAtStart(this.fullfills.first);
-      }
-    });
+	      // end
+	      if (e.keyCode == 35) {
+	        e.preventDefault();
+	        //TODO maybe better behavior
+	        //like last NON-EMPTY input not just last input
+	        focusAtEnd(this.fullfills.last);
+	      }
+	      // home
+	      else if(e.keyCode == 36) {
+	        e.preventDefault();
+	        focusAtStart(this.fullfills.first);
+	      }
+	    }),
+		//TODO just click ?
+	    this.renderer.listen(this.elRef.nativeElement, 'click', (e: Event) => {
+	    	//click outside inputs
+	    	if(e.target && !isInputElement(e.target)) {
+	    		/* TODO we should focus on the closest input and at start/end
+					depending on where the click was
+				*/
+	    		this.fullfills.first.elRef.nativeElement.focus()
+	    	}
+	    })
+	]
 
     // TODO correctors is a QueryList so technically
     // we should listen for changes and unlisten/unsubscribe on deleted element
@@ -46,7 +58,7 @@ export class GroupInputDirective {
       this.renderer.listen(ff.elRef.nativeElement, 'keydown', (e: KeyboardEvent) => {
         let input = e.target;
 
-        if (input instanceof HTMLInputElement) {
+        if ( isInputElement(input) ) {
            //right arrow
           if (e.keyCode == 39) {
             if( input.selectionStart == input.value.length ){
@@ -105,7 +117,7 @@ export class GroupInputDirective {
   }
 
   ngOnDestroy() {
-    this.unlisten();
+    this.unlistens.forEach(f => f());
   }
 }
 
@@ -143,4 +155,12 @@ function focusAtEnd(ff: Fullfill) {
 
     el.focus();
   } catch(e) {}
+}
+
+function isHTMLElement(e: any):  e is HTMLElement {
+	return e.nodeType == Node.ELEMENT_NODE;
+}
+
+function isInputElement(e: any): e is HTMLInputElement {
+	return isHTMLElement(e) && (e.tagName == 'INPUT' || e.nodeName == 'INPUT');
 }
